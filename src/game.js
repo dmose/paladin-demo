@@ -101,8 +101,25 @@ function Game() {
             }
         } );
         entity.listen( {
-            event: paladin.mouseInput.Event( ['mouse1'], false ),
-            callback: function( p ) {
+            event: paladin.touchInput.Event( [], true ),
+            callback: function( p ) { 
+                var position = p[0].position;
+                var width = paladin.graphics.getWidth();
+                if( position.x < width/2 )
+                    keysDown['a'] = true;
+                else if( position.x > width/2 )
+                    keysDown['d'] = true;
+            }
+        } );
+        entity.listen( {
+            event: paladin.touchInput.Event( [], false ),
+            callback: function( p ) { 
+                var position = p[0].position;
+                var width = paladin.graphics.getWidth();
+                if( position.x < width/2 )
+                    keysDown['a'] = false;
+                else if( position.x > width/2 )
+                    keysDown['d'] = false;
             }
         } );
       }
