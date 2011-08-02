@@ -55,21 +55,7 @@ function Game() {
 
           }
         }),
-      ], //children
-      listeners: {
-        'a-up': function ( params ) {
-          keysDown['a'] = false;
-        },
-        'a-down': function ( params ) {
-          keysDown['a'] = true;
-        },
-        'd-up': function ( params ) {
-          keysDown['d'] = false;
-        },
-        'd-down': function ( params ) {
-          keysDown['d'] = true;
-        }
-      },
+      ],
       
       init: function ( entity ) {
         var accel = 0.01;
@@ -88,6 +74,35 @@ function Game() {
                 entity.spatial.position[0] += dirVec[0] * accel * task.dt;
                 entity.spatial.position[2] += dirVec[2] * accel * task.dt;
 
+            }
+        } );
+        entity.listen( {
+            event: paladin.keyboardInput.Event( ['a'], false ), 
+            callback: function( p ) {
+                keysDown['a'] = false;
+            }
+        } );
+        entity.listen( {
+            event: paladin.keyboardInput.Event( ['a'], true ), 
+            callback: function( p ) {
+                keysDown['a'] = true;
+            }
+        } );
+        entity.listen( {
+            event: paladin.keyboardInput.Event( ['d'], false ), 
+            callback: function( p ) {
+                keysDown['d'] = false;
+            }
+        } );
+        entity.listen( {
+            event: paladin.keyboardInput.Event( ['d'], true ), 
+            callback: function( p ) {
+                keysDown['d'] = true;
+            }
+        } );
+        entity.listen( {
+            event: paladin.mouseInput.Event( ['mouse1'], false ),
+            callback: function( p ) {
             }
         } );
       }
