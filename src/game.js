@@ -8,9 +8,13 @@ function Game() {
     var scene = new paladin.Scene();
     paladin.graphics.pushScene( scene );
 
-    var keysDown = {};
+    var events = {};
     
     var shipBody;
+
+    var inputMap = new paladin.InputMap( paladin.messenger );
+    var rollLeftEvent = "RollLeftEvent",
+        rollRightEvent = "RollRightEvent";
 
     var shipEntity = this.entity = new paladin.Entity({
       parent: scene,
@@ -40,11 +44,11 @@ function Game() {
             var cameraRoll = 0;
             paladin.tasker.add( {
               callback: function ( task ) {
-                if ( keysDown['a'] ) {
+                if ( events[rollLeftEvent] ) {
                   shipEntity.spatial.rotation[1] += 1 * task.dt/20;
                   cameraRoll = Math.min(10, cameraRoll+1);
                 }
-                else if ( keysDown['d'] ) {
+                else if ( events[rollRightEvent] ) {
                   shipEntity.spatial.rotation[1] -= 1 * task.dt/20;
                   cameraRoll = Math.max(-10, cameraRoll-1);
                 }
@@ -94,28 +98,36 @@ function Game() {
 
             }
         } );
+        inputMap.add( paladin.messenger.Event( rollLeftEvent, true ),
+                      paladin.keyboardInput.Event( ['a'], true ) )
+        inputMap.add( paladin.messenger.Event( rollRightEvent, true ),
+                      paladin.keyboardInput.Event( ['d'], true ) )
+        inputMap.add( paladin.messenger.Event( rollLeftEvent, false ),
+                      paladin.keyboardInput.Event( ['a'], false ) )
+        inputMap.add( paladin.messenger.Event( rollRightEvent, false ),
+                      paladin.keyboardInput.Event( ['d'], false ) )
         entity.listen( {
-            event: paladin.keyboardInput.Event( ['a'], false ), 
+            event: paladin.messenger.Event( rollLeftEvent, false ), 
             callback: function( p ) {
-                keysDown['a'] = false;
+                events[rollLeftEvent] = false;
             }
         } );
         entity.listen( {
-            event: paladin.keyboardInput.Event( ['a'], true ), 
+            event: paladin.messenger.Event( rollLeftEvent, true ), 
             callback: function( p ) {
-                keysDown['a'] = true;
+                events[rollLeftEvent] = true;
             }
         } );
         entity.listen( {
-            event: paladin.keyboardInput.Event( ['d'], false ), 
+            event: paladin.messenger.Event( rollRightEvent, false ), 
             callback: function( p ) {
-                keysDown['d'] = false;
+                events[rollRightEvent] = false;
             }
         } );
         entity.listen( {
-            event: paladin.keyboardInput.Event( ['d'], true ), 
+            event: paladin.messenger.Event( rollRightEvent, true ), 
             callback: function( p ) {
-                keysDown['d'] = true;
+                events[rollRightEvent] = true;
             }
         } );
         entity.listen( {
@@ -124,9 +136,13 @@ function Game() {
                 var position = p[0].position;
                 var width = paladin.graphics.getWidth();
                 if( position.x < width/2 )
-                    keysDown['a'] = true;
+                    paladin.messenger.send( {
+                        event: paladin.messenger.Event( rollLeftEvent, true )
+                    } );
                 else if( position.x > width/2 )
-                    keysDown['d'] = true;
+                    paladin.messenger.send( {
+                        event: paladin.messenger.Event( rollRightEvent, true )
+                    } );
             }
         } );
         entity.listen( {
@@ -135,9 +151,13 @@ function Game() {
                 var position = p[0].position;
                 var width = paladin.graphics.getWidth();
                 if( position.x < width/2 )
-                    keysDown['a'] = false;
+                    paladin.messenger.send( {
+                        event: paladin.messenger.Event( rollLeftEvent, false )
+                    } );
                 else if( position.x > width/2 )
-                    keysDown['d'] = false;
+                    paladin.messenger.send( {
+                        event: paladin.messenger.Event( rollRightEvent, false )
+                    } );
             }
         } );
       }
