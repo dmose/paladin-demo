@@ -12,9 +12,9 @@ function Game() {
     
     var shipBody;
 
-    var inputMap = new paladin.InputMap( paladin.messenger );
     var rollLeftEvent = "RollLeftEvent",
-        rollRightEvent = "RollRightEvent";
+        rollRightEvent = "RollRightEvent",
+        fireWeaponEvent = "FireWeaponEvent";
 
     var shipEntity = this.entity = new paladin.Entity({
       parent: scene,
@@ -57,8 +57,6 @@ function Game() {
                 }
                 entity.spatial.rotation[2] = -cameraRoll;
                 shipModel.object.rotation[2] = -cameraRoll*5;
-                
-
               }
             } );
 
@@ -71,11 +69,28 @@ function Game() {
           }
         }),
       ],
-      
+
       init: function ( entity ) {
         var accel = 0.01;
-        var shipFlyingTask = paladin.tasker.add( {
+        var cooldown = 0;
+        var cooldownTime = 1.0;
+        var projectileMesh = new paladin.graphics.Mesh( {
+            primitives: [ {
+                type: 'box',
+                size: 1,
+                material: {
+                    color: [1, 1, 1]
+                }
+            } ],
+            finalize: true
+        } );
+        var projectileAccel = 0.1;
+        var projectileDuration = 4;
+
+        var updateTask = paladin.tasker.add( {
             callback: function ( task ) {
+
+                // Move this ship.
                 var rotY = entity.spatial.rotation[1];
                 
                 var dirVec = [
@@ -96,16 +111,53 @@ function Game() {
                 entity.spatial.position[1] = dims[1];
                 entity.spatial.position[2] = dims[2];
 
+                // Handle weapon stuff here.
+                if( cooldown > 0 )
+                    cooldown = Math.max( 0, cooldown - task.dt );
+
+                if( events[fireWeaponEvent] && 0 == cooldown ) {
+                    cooldown = cooldownTime;
+                    events[fireWeaponEvent] = false;
+                    var projectileEntity = new paladin.Entity( {
+                        parent: scene,
+                        components: [
+                            new paladin.component.Model( {
+                                mesh: projectileMesh
+                            } )
+                        ],
+                        init: function( entity ) {
+                            entity.velocity = dirVec;
+                            entity.accel = projectileAccel;
+                            entity.duration = projectileDuration;
+                            entity.spatial.position = [
+                                shipEntity.spatial.position[0],
+                                shipEntity.spatial.position[1],
+                                shipEntity.spatial.position[2]
+                            ];                            
+                            entity.updateTask = paladin.tasker.add( {                                
+                                callback: function( task ) {
+                                    entity.spatial.position[0] += entity.velocity[0] * entity.accel * task.dt;
+                                    entity.spatial.position[2] += entity.velocity[2] * entity.accel * task.dt;
+                                }
+                            } );
+                        }                        
+                    } );
+                }
             }
         } );
+
+        var inputMap = new paladin.InputMap( entity );
         inputMap.add( paladin.messenger.Event( rollLeftEvent, true ),
-                      paladin.keyboardInput.Event( ['a'], true ) )
+                      paladin.keyboardInput.Event( ['a'], true ) );
         inputMap.add( paladin.messenger.Event( rollRightEvent, true ),
-                      paladin.keyboardInput.Event( ['d'], true ) )
+                      paladin.keyboardInput.Event( ['d'], true ) );
+        inputMap.add( paladin.messenger.Event( fireWeaponEvent, true ),
+                      paladin.keyboardInput.Event( ['space'], true ) );
         inputMap.add( paladin.messenger.Event( rollLeftEvent, false ),
-                      paladin.keyboardInput.Event( ['a'], false ) )
+                      paladin.keyboardInput.Event( ['a'], false ) );
         inputMap.add( paladin.messenger.Event( rollRightEvent, false ),
-                      paladin.keyboardInput.Event( ['d'], false ) )
+                      paladin.keyboardInput.Event( ['d'], false ) );
+
         entity.listen( {
             event: paladin.messenger.Event( rollLeftEvent, false ), 
             callback: function( p ) {
@@ -128,6 +180,12 @@ function Game() {
             event: paladin.messenger.Event( rollRightEvent, true ), 
             callback: function( p ) {
                 events[rollRightEvent] = true;
+            }
+        } );
+        entity.listen( {
+            event: paladin.messenger.Event( fireWeaponEvent, true ),
+            callback: function( p ) {
+                events[fireWeaponEvent] = true;
             }
         } );
         entity.listen( {
