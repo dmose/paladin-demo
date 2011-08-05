@@ -16,6 +16,100 @@ function Game() {
         rollRightEvent = "RollRightEvent",
         fireWeaponEvent = "FireWeaponEvent";
 
+    // This shouldn't be CubicVR code...
+    var explosionMesh = CubicVR.primitives.box({
+      size: 5+Math.random(),
+      transform: (new CubicVR.Transform()).rotate([
+                    Math.random()*360, 
+                    Math.random()*360, 
+                    Math.random()*360]).translate([
+                    -.5+Math.random()*.5, 
+                    -.5+Math.random()*.5, 
+                    -.5+Math.random()*.5]),
+      material: new CubicVR.Material({
+        specular: [1, 1, 1],
+        shininess: 1.0,
+        env_amount: 0.5,
+        color: [Math.random()*.2+.8, Math.random()*.1, 0],
+        opacity: 0.1,
+        textures: {
+          envsphere: new CubicVR.Texture('fract_reflections.jpg'),
+          alpha: new CubicVR.Texture('fract_reflections.jpg')
+        }
+      }),
+      uvmapper: {
+        projectionMode: CubicVR.enums.uv.projection.CUBIC,
+        scale:[5, 5, 5]
+      }
+    });
+    CubicVR.primitives.box({
+      mesh: explosionMesh,
+      size: 5+Math.random(),
+      transform: (new CubicVR.Transform()).rotate([
+                    Math.random()*360, 
+                    Math.random()*360, 
+                    Math.random()*360]).translate([
+                    -.5+Math.random()*.5, 
+                    -.5+Math.random()*.5, 
+                    -.5+Math.random()*.5]),
+      material: new CubicVR.Material({
+        env_amount: 1.0,
+        color: [Math.random()*.2+.8, Math.random()*.2+.6, 0],
+        env_amount: .5,
+        opacity: 0.1,
+        textures: {
+          envsphere: new CubicVR.Texture('fract_reflections.jpg'),
+          alpha: new CubicVR.Texture('fract_reflections.jpg')
+        }
+      }),
+      uvmapper: {
+        projectionMode: CubicVR.enums.uv.projection.CUBIC,
+        scale:[5, 5, 5]
+      }
+    });
+    CubicVR.primitives.sphere({
+      mesh: explosionMesh,
+      lon: 24,
+      lat: 24,
+      radius: 6+Math.random(),
+      transform: (new CubicVR.Transform()).rotate([Math.random()*360, Math.random()*360, Math.random()*360]),
+      material: new CubicVR.Material({
+        opacity: .999,
+        color: [Math.random()*.2+.8, Math.random()*.2+.3, 0],
+        textures: {
+          alpha: new CubicVR.Texture('fract_reflections.jpg')
+        }
+      }),
+      uvmapper: {
+        projectionMode: CubicVR.enums.uv.projection.CUBIC,
+        scale:[5, 5, 5]
+      }
+    });
+    explosionMesh.prepare();
+
+    function makeExplosion ( position ) {
+      paladin.tasker.add((function () {
+        var explosionObject = new CubicVR.SceneObject( explosionMesh );
+        explosionObject.position = position.slice();
+        scene.graphics.bindSceneObject(explosionObject);
+        explosionObject.rotation = [
+          Math.random()*360,
+          Math.random()*360,
+          Math.random()*360
+        ];
+        explosionObject.scale = [.1, .1, .1];
+        return { callback: function ( task ) {
+          var s = 40 - 40/(Math.pow(Math.E, task.elapsed/1000));
+          explosionObject.scale = [s, s, s];
+          if ( task.elapsed > 2000 ) {
+            scene.graphics.removeSceneObject( explosionObject );
+            return task.DONE;
+          }
+          return task.CONT;
+        }}
+      })());
+    } //makeExplosion
+
     var shipEntity = this.entity = new paladin.Entity({
       parent: scene,
       children: [
@@ -84,7 +178,7 @@ function Game() {
             } ],
             finalize: true
         } );
-        var projectileAccel = 0.1;
+        var projectileAccel = .1;
         var projectileDuration = 4;
 
         var updateTask = paladin.tasker.add( {
@@ -127,17 +221,50 @@ function Game() {
                         ],
                         init: function( entity ) {
                             entity.velocity = dirVec;
-                            entity.accel = projectileAccel;
+                            entity.accel = [ dirVec[0] * projectileAccel, 0, dirVec[2] * projectileAccel ];
                             entity.duration = projectileDuration;
                             entity.spatial.position = [
                                 shipEntity.spatial.position[0],
                                 shipEntity.spatial.position[1],
                                 shipEntity.spatial.position[2]
                             ];                            
+
+                            // this is really just here to grab a sane AABB from model.object.getAABB()
+                            scene.graphics.prepareTransforms();
+
+                            var model = entity.getComponents( "graphics", "model" );
+                            var physicsBody = new paladin.physics.Body({
+                              aabb: model.object.getAABB()
+                            });
+                            physicsBody.setVelocity( entity.velocity );
+                            physicsBody.setAcceleration( entity.accel );
+                            universe.addBody( physicsBody );
+
                             entity.updateTask = paladin.tasker.add( {                                
                                 callback: function( task ) {
-                                    entity.spatial.position[0] += entity.velocity[0] * entity.accel * task.dt;
-                                    entity.spatial.position[2] += entity.velocity[2] * entity.accel * task.dt;
+                                    //entity.spatial.position[0] += entity.velocity[0] * entity.accel * task.dt;
+                                    //entity.spatial.position[2] += entity.velocity[2] * entity.accel * task.dt;
+
+                                    if ( physicsBody.collisions.length > 0 ) {
+                                        for ( var i=0, l=physicsBody.collisions.length; i<l; ++i ) {
+                                            var otherEntity = physicsBody.collisions[i].externalObject;
+                                            if ( otherEntity && otherEntity !== shipBody ) {
+                                                makeExplosion( otherEntity.spatial.position );
+
+                                                // this is just silly
+                                                entity.spatial.position[1] = 200;
+                                                otherEntity.spatial.position[1] = 200;
+
+                                                universe.removeBody( physicsBody );
+                                                return task.DONE;
+                                            }
+                                        }
+                                    }
+                                    var dims = physicsBody.getSphere().getDims();
+                                    entity.spatial.position[0] = dims[0];
+                                    entity.spatial.position[1] = dims[1];
+                                    entity.spatial.position[2] = dims[2];
+                                    return task.CONT;
                                 }
                             } );
                         }                        
@@ -241,9 +368,9 @@ function Game() {
             mesh: mesh
         } );
         box.addComponent( model );
-        box.spatial.position = [-50 + 100 * Math.random(), 
+        box.spatial.position = [-150 + 300 * Math.random(), 
                                 -5 + 10 * Math.random(),
-                                -50 + 100 * Math.random()];
+                                -150 + 300 * Math.random()];
 
         box.spatial.rotation = [Math.random() * 360,
                                 Math.random() * 360,
@@ -275,76 +402,6 @@ function Game() {
         }
     } );
     
-    // This shouldn't be CubicVR code...
-    var explosionMesh = CubicVR.primitives.box({
-      size: 5+Math.random(),
-      transform: (new CubicVR.Transform()).rotate([
-                    Math.random()*360, 
-                    Math.random()*360, 
-                    Math.random()*360]).translate([
-                    -.5+Math.random()*.5, 
-                    -.5+Math.random()*.5, 
-                    -.5+Math.random()*.5]),
-      material: new CubicVR.Material({
-        specular: [1, 1, 1],
-        shininess: 1.0,
-        env_amount: 0.5,
-        color: [Math.random()*.2+.8, Math.random()*.1, 0],
-        opacity: 0.1,
-        textures: {
-          envsphere: new CubicVR.Texture('fract_reflections.jpg'),
-          alpha: new CubicVR.Texture('fract_reflections.jpg')
-        }
-      }),
-      uvmapper: {
-        projectionMode: CubicVR.enums.uv.projection.CUBIC,
-        scale:[5, 5, 5]
-      }
-    });
-    CubicVR.primitives.box({
-      mesh: explosionMesh,
-      size: 5+Math.random(),
-      transform: (new CubicVR.Transform()).rotate([
-                    Math.random()*360, 
-                    Math.random()*360, 
-                    Math.random()*360]).translate([
-                    -.5+Math.random()*.5, 
-                    -.5+Math.random()*.5, 
-                    -.5+Math.random()*.5]),
-      material: new CubicVR.Material({
-        env_amount: 1.0,
-        color: [Math.random()*.2+.8, Math.random()*.2+.6, 0],
-        env_amount: .5,
-        opacity: 0.1,
-        textures: {
-          envsphere: new CubicVR.Texture('fract_reflections.jpg'),
-          alpha: new CubicVR.Texture('fract_reflections.jpg')
-        }
-      }),
-      uvmapper: {
-        projectionMode: CubicVR.enums.uv.projection.CUBIC,
-        scale:[5, 5, 5]
-      }
-    });
-    CubicVR.primitives.sphere({
-      mesh: explosionMesh,
-      lon: 24,
-      lat: 24,
-      radius: 6+Math.random(),
-      transform: (new CubicVR.Transform()).rotate([Math.random()*360, Math.random()*360, Math.random()*360]),
-      material: new CubicVR.Material({
-        opacity: .999,
-        color: [Math.random()*.2+.8, Math.random()*.2+.3, 0],
-        textures: {
-          alpha: new CubicVR.Texture('fract_reflections.jpg')
-        }
-      }),
-      uvmapper: {
-        projectionMode: CubicVR.enums.uv.projection.CUBIC,
-        scale:[5, 5, 5]
-      }
-    });
-    explosionMesh.prepare();
 
     this.run = function () {
       paladin.tasker.add({
@@ -353,28 +410,11 @@ function Game() {
           if ( shipBody.collisions.length > 0 ) {
             for ( var i=0, l=shipBody.collisions.length; i<l; ++i ) {
               var entity = shipBody.collisions[i].externalObject;
-              entity.spatial.position[1] = 200;
-              universe.removeBody( shipBody.collisions[i] );
-              paladin.tasker.add((function () {
-                var explosionObject = new CubicVR.SceneObject( explosionMesh );
-                explosionObject.position = shipEntity.spatial.position.slice();
-                scene.graphics.bindSceneObject(explosionObject);
-                explosionObject.rotation = [
-                  Math.random()*360,
-                  Math.random()*360,
-                  Math.random()*360
-                ];
-                explosionObject.scale = [.1, .1, .1];
-                return { callback: function ( task ) {
-                  var s = 40 - 40/(Math.pow(Math.E, task.elapsed/1000));
-                  explosionObject.scale = [s, s, s];
-                  if ( task.elapsed > 2000 ) {
-                    scene.graphics.removeSceneObject( explosionObject );
-                    return task.DONE;
-                  }
-                  return task.CONT;
-                }}
-              })());
+              if ( entity ) {
+                entity.spatial.position[1] = 200;
+                universe.removeBody( shipBody.collisions[i] );
+                makeExplosion( shipEntity.spatial.position );
+              } //if
             }
           }
         }
