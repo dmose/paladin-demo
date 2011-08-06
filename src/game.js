@@ -1,5 +1,7 @@
 (function ( window, document, CubicVR, Paladin ) {
 
+var ONE_SECOND = 1000;
+
 function Game() {
 
     var paladin = new Paladin( {debug: true} );
@@ -167,7 +169,7 @@ function Game() {
       init: function ( entity ) {
         var accel = 0.01;
         var cooldown = 0;
-        var cooldownTime = 1.0;
+        var cooldownTime = 2.0 * ONE_SECOND;
         var projectileMesh = new paladin.graphics.Mesh( {
             primitives: [ {
                 type: 'box',
@@ -209,9 +211,8 @@ function Game() {
                 if( cooldown > 0 )
                     cooldown = Math.max( 0, cooldown - task.dt );
 
-                if( events[fireWeaponEvent] && 0 == cooldown ) {
+                if( events[fireWeaponEvent] && 0 === cooldown ) {
                     cooldown = cooldownTime;
-                    events[fireWeaponEvent] = false;
                     var projectileEntity = new paladin.Entity( {
                         parent: scene,
                         components: [
@@ -310,6 +311,12 @@ function Game() {
             }
         } );
         entity.listen( {
+            event: paladin.messenger.Event( fireWeaponEvent, false ),
+            callback: function( p ) {
+                events[fireWeaponEvent] = false;
+            }
+        } );
+        entity.listen( {
             event: paladin.messenger.Event( fireWeaponEvent, true ),
             callback: function( p ) {
                 events[fireWeaponEvent] = true;
@@ -320,7 +327,12 @@ function Game() {
             callback: function( p ) { 
                 var position = p[0].position;
                 var width = paladin.graphics.getWidth();
-                if( position.x < width/2 )
+                var height = paladin.graphics.getHeight();
+                if( position.y > height - height/4 )
+                    paladin.messenger.send( {
+                        event: paladin.messenger.Event( fireWeaponEvent, true )
+                    } );
+                else if( position.x < width/2 )
                     paladin.messenger.send( {
                         event: paladin.messenger.Event( rollLeftEvent, true )
                     } );
@@ -333,16 +345,15 @@ function Game() {
         entity.listen( {
             event: paladin.touchInput.Event( [], false ),
             callback: function( p ) { 
-                var position = p[0].position;
-                var width = paladin.graphics.getWidth();
-                if( position.x < width/2 )
-                    paladin.messenger.send( {
-                        event: paladin.messenger.Event( rollLeftEvent, false )
-                    } );
-                else if( position.x > width/2 )
-                    paladin.messenger.send( {
-                        event: paladin.messenger.Event( rollRightEvent, false )
-                    } );
+                paladin.messenger.send( {
+                    event: paladin.messenger.Event( fireWeaponEvent, false )
+                } );
+                paladin.messenger.send( {
+                    event: paladin.messenger.Event( rollLeftEvent, false )
+                } );
+                paladin.messenger.send( {
+                    event: paladin.messenger.Event( rollRightEvent, false )
+                } );
             }
         } );
       }
