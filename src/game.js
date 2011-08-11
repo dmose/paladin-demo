@@ -11,21 +11,21 @@ function Game() {
     // XXXhumph: should probably do some kind of callback for run()
     // so it doesn't start before sounds are ready...
     paladin.sound.Track.load({
-      url: sampleSounds['small-explosion'],
+      url: soundEffects['small-explosion'],
       callback: function(track) {
         speaker.add('small-explosion', track);
       }
     });
 
     paladin.sound.Track.load({
-      url: sampleSounds['big-explosion'],
+      url: soundEffects['big-explosion'],
       callback: function(track) {
         speaker.add('big-explosion', track);
       }
     });
 
     paladin.sound.Track.load({
-      url: sampleSounds['explosion'],
+      url: soundEffects['explosion'],
       callback: function(track) {
         speaker.add('explosion', track);
       }
@@ -41,7 +41,7 @@ function Game() {
     }());
 
     paladin.sound.Track.load({
-      url: sampleSounds['laser2'],
+      url: soundEffects['laser2'],
       callback: function(track) {
         speaker.add('laser2', track);
       }
