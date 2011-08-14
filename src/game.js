@@ -7,6 +7,46 @@ function Game() {
 
     var paladin = new Paladin( {debug: true} );
     var universe = new paladin.physics.Universe();
+    var speaker = new paladin.component.Speaker();
+
+    // XXXhumph: should probably do some kind of callback for run()
+    // so it doesn't start before sounds are ready...
+    paladin.sound.Track.load({
+      url: soundEffects['small-explosion'],
+      callback: function(track) {
+        speaker.add('small-explosion', track);
+      }
+    });
+
+    paladin.sound.Track.load({
+      url: soundEffects['big-explosion'],
+      callback: function(track) {
+        speaker.add('big-explosion', track);
+      }
+    });
+
+    paladin.sound.Track.load({
+      url: soundEffects['explosion'],
+      callback: function(track) {
+        speaker.add('explosion', track);
+      }
+    });
+
+    var randomExplosion = (function() {
+      var names = ['explosion', 'small-explosion', 'big-explosion'],
+        namesLen = names.length;
+
+      return function() {
+        return names[ Math.floor(Math.random() * namesLen) ];
+      };
+    }());
+
+    paladin.sound.Track.load({
+      url: soundEffects['laser2'],
+      callback: function(track) {
+        speaker.add('laser2', track);
+      }
+    });
 
     var scene = new paladin.Scene();
     paladin.graphics.pushScene( scene );
@@ -91,6 +131,7 @@ function Game() {
 
     function makeExplosion ( position ) {
       paladin.tasker.add((function () {
+        speaker.play( randomExplosion() );
         var explosionObject = new CubicVR.SceneObject( explosionMesh );
         explosionObject.position = position.slice();
         scene.graphics.bindSceneObject(explosionObject);
@@ -222,6 +263,7 @@ function Game() {
                             } )
                         ],
                         init: function( entity ) {
+                            speaker.play('laser2');
                             entity.velocity = dirVec;
                             entity.accel = [ dirVec[0] * projectileAccel, 0, dirVec[2] * projectileAccel ];
                             entity.duration = projectileDuration;
