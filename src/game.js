@@ -285,6 +285,8 @@ function Game() {
                       paladin.keyboardInput.Event( ['a'], false ) );
         inputMap.add( paladin.messenger.Event( rollRightEvent, false ),
                       paladin.keyboardInput.Event( ['d'], false ) );
+        inputMap.add( paladin.messenger.Event( fireWeaponEvent, false ),
+                      paladin.keyboardInput.Event( ['space'], false ) );
 
         entity.listen( {
             event: paladin.messenger.Event( rollLeftEvent, false ), 
