@@ -1,3 +1,4 @@
+/*global CubicVR, Paladin, window*/
 (function ( window, document, CubicVR, Paladin ) {
 
 var ONE_SECOND = 1000;
@@ -6,6 +7,46 @@ function Game() {
 
     var paladin = new Paladin( {debug: true} );
     var universe = new paladin.physics.Universe();
+    var speaker = new paladin.component.Speaker();
+
+    // XXXhumph: should probably do some kind of callback for run()
+    // so it doesn't start before sounds are ready...
+    paladin.sound.Track.load({
+      url: soundEffects['small-explosion'],
+      callback: function(track) {
+        speaker.add('small-explosion', track);
+      }
+    });
+
+    paladin.sound.Track.load({
+      url: soundEffects['big-explosion'],
+      callback: function(track) {
+        speaker.add('big-explosion', track);
+      }
+    });
+
+    paladin.sound.Track.load({
+      url: soundEffects['explosion'],
+      callback: function(track) {
+        speaker.add('explosion', track);
+      }
+    });
+
+    var randomExplosion = (function() {
+      var names = ['explosion', 'small-explosion', 'big-explosion'],
+        namesLen = names.length;
+
+      return function() {
+        return names[ Math.floor(Math.random() * namesLen) ];
+      };
+    }());
+
+    paladin.sound.Track.load({
+      url: soundEffects['laser2'],
+      callback: function(track) {
+        speaker.add('laser2', track);
+      }
+    });
 
     var scene = new paladin.Scene();
     paladin.graphics.pushScene( scene );
@@ -25,14 +66,14 @@ function Game() {
                     Math.random()*360, 
                     Math.random()*360, 
                     Math.random()*360]).translate([
-                    -.5+Math.random()*.5, 
-                    -.5+Math.random()*.5, 
-                    -.5+Math.random()*.5]),
+                    -0.5+Math.random()*0.5, 
+                    -0.5+Math.random()*0.5, 
+                    -0.5+Math.random()*0.5]),
       material: new CubicVR.Material({
         specular: [1, 1, 1],
         shininess: 1.0,
         env_amount: 0.5,
-        color: [Math.random()*.2+.8, Math.random()*.1, 0],
+        color: [Math.random()*0.2+0.8, Math.random()*0.1, 0],
         opacity: 0.1,
         textures: {
           envsphere: new CubicVR.Texture('fract_reflections.jpg'),
@@ -51,13 +92,12 @@ function Game() {
                     Math.random()*360, 
                     Math.random()*360, 
                     Math.random()*360]).translate([
-                    -.5+Math.random()*.5, 
-                    -.5+Math.random()*.5, 
-                    -.5+Math.random()*.5]),
+                    -0.5+Math.random()*0.5, 
+                    -0.5+Math.random()*0.5, 
+                    -0.5+Math.random()*0.5]),
       material: new CubicVR.Material({
-        env_amount: 1.0,
-        color: [Math.random()*.2+.8, Math.random()*.2+.6, 0],
-        env_amount: .5,
+        color: [Math.random()*0.2+0.8, Math.random()*0.2+0.06, 0],
+        env_amount: 0.5,
         opacity: 0.1,
         textures: {
           envsphere: new CubicVR.Texture('fract_reflections.jpg'),
@@ -76,8 +116,8 @@ function Game() {
       radius: 6+Math.random(),
       transform: (new CubicVR.Transform()).rotate([Math.random()*360, Math.random()*360, Math.random()*360]),
       material: new CubicVR.Material({
-        opacity: .999,
-        color: [Math.random()*.2+.8, Math.random()*.2+.3, 0],
+        opacity: 0.999,
+        color: [Math.random()*0.2+0.8, Math.random()*0.2+0.3, 0],
         textures: {
           alpha: new CubicVR.Texture('fract_reflections.jpg')
         }
@@ -91,6 +131,7 @@ function Game() {
 
     function makeExplosion ( position ) {
       paladin.tasker.add((function () {
+        speaker.play( randomExplosion() );
         var explosionObject = new CubicVR.SceneObject( explosionMesh );
         explosionObject.position = position.slice();
         scene.graphics.bindSceneObject(explosionObject);
@@ -99,7 +140,7 @@ function Game() {
           Math.random()*360,
           Math.random()*360
         ];
-        explosionObject.scale = [.1, .1, .1];
+        explosionObject.scale = [0.1, 0.1, 0.1];
         return { callback: function ( task ) {
           var s = 40 - 40/(Math.pow(Math.E, task.elapsed/1000));
           explosionObject.scale = [s, s, s];
@@ -108,7 +149,7 @@ function Game() {
             return task.DONE;
           }
           return task.CONT;
-        }}
+        }};
       })());
     } //makeExplosion
 
@@ -149,7 +190,7 @@ function Game() {
                   cameraRoll = Math.max(-10, cameraRoll-1);
                 }
                 else {
-                  cameraRoll -= cameraRoll*.1 * task.dt/20;
+                  cameraRoll -= cameraRoll*0.1 * task.dt/20;
                 }
                 entity.spatial.rotation[2] = -cameraRoll;
                 shipModel.object.rotation[2] = -cameraRoll*5;
@@ -163,7 +204,7 @@ function Game() {
             universe.addBody( shipBody );
 
           }
-        }),
+        })
       ],
 
       init: function ( entity ) {
@@ -180,7 +221,7 @@ function Game() {
             } ],
             finalize: true
         } );
-        var projectileAccel = .1;
+        var projectileAccel = 0.1;
         var projectileDuration = 4;
 
         var updateTask = paladin.tasker.add( {
@@ -208,8 +249,9 @@ function Game() {
                 entity.spatial.position[2] = dims[2];
 
                 // Handle weapon stuff here.
-                if( cooldown > 0 )
+                if( cooldown > 0 ) {
                     cooldown = Math.max( 0, cooldown - task.dt );
+                }
 
                 if( events[fireWeaponEvent] && 0 === cooldown ) {
                     cooldown = cooldownTime;
@@ -221,6 +263,7 @@ function Game() {
                             } )
                         ],
                         init: function( entity ) {
+                            speaker.play('laser2');
                             entity.velocity = dirVec;
                             entity.accel = [ dirVec[0] * projectileAccel, 0, dirVec[2] * projectileAccel ];
                             entity.duration = projectileDuration;
@@ -330,18 +373,21 @@ function Game() {
                 var position = p[0].position;
                 var width = paladin.graphics.getWidth();
                 var height = paladin.graphics.getHeight();
-                if( position.y > height - height/4 )
+                if( position.y > height - height/4 ) {
                     paladin.messenger.send( {
                         event: paladin.messenger.Event( fireWeaponEvent, true )
                     } );
-                else if( position.x < width/2 )
+                }
+                else if( position.x < width/2 ) {
                     paladin.messenger.send( {
                         event: paladin.messenger.Event( rollLeftEvent, true )
                     } );
-                else if( position.x > width/2 )
+                }
+                else if( position.x > width/2 ) {
                     paladin.messenger.send( {
                         event: paladin.messenger.Event( rollRightEvent, true )
                     } );
+                }
             }
         } );
         entity.listen( {
@@ -408,9 +454,9 @@ function Game() {
     var rotationTask = paladin.tasker.add( {
         callback: function( task ) {
           for ( var i=0, l=boxes.length; i<l; ++i) {
-            boxes[i].spatial.rotation[0] += .1;
-            boxes[i].spatial.rotation[1] += .2;
-            boxes[i].spatial.rotation[2] += .3;
+            boxes[i].spatial.rotation[0] += 0.1;
+            boxes[i].spatial.rotation[1] += 0.2;
+            boxes[i].spatial.rotation[2] += 0.3;
           }
         }
     } );
@@ -444,7 +490,7 @@ function Game() {
       areaAxis:[25,5]
     }));
 
-};
+}
 
 document.addEventListener('DOMContentLoaded', function (e) {
     var game = new Game();
