@@ -1,31 +1,30 @@
-/*global CubicVR, Paladin, window*/
-(function ( window, document, CubicVR, Paladin ) {
+(function () {
 
 var ONE_SECOND = 1000;
 
-function Game() {
 
-    var paladin = new Paladin( {debug: true} );
-    var universe = new paladin.physics.Universe();
-    var speaker = new paladin.component.Speaker();
+function Game( engine ) {
+
+    var universe = new engine.physics.Universe();
+    var speaker = new engine.component.Speaker();
 
     // XXXhumph: should probably do some kind of callback for run()
     // so it doesn't start before sounds are ready...
-    paladin.sound.Track.load({
+    engine.sound.Track.load({
       url: soundEffects['small-explosion'],
       callback: function(track) {
         speaker.add('small-explosion', track);
       }
     });
 
-    paladin.sound.Track.load({
+    engine.sound.Track.load({
       url: soundEffects['big-explosion'],
       callback: function(track) {
         speaker.add('big-explosion', track);
       }
     });
 
-    paladin.sound.Track.load({
+    engine.sound.Track.load({
       url: soundEffects['explosion'],
       callback: function(track) {
         speaker.add('explosion', track);
@@ -41,15 +40,15 @@ function Game() {
       };
     }());
 
-    paladin.sound.Track.load({
+    engine.sound.Track.load({
       url: soundEffects['laser2'],
       callback: function(track) {
         speaker.add('laser2', track);
       }
     });
 
-    var scene = new paladin.Scene();
-    paladin.graphics.pushScene( scene );
+    var scene = new engine.Scene();
+    engine.graphics.pushScene( scene );
 
     var events = {};
     
@@ -60,52 +59,52 @@ function Game() {
         fireWeaponEvent = "FireWeaponEvent";
 
     // This shouldn't be CubicVR code...
-    var explosionMesh = CubicVR.primitives.box({
+    var explosionMesh = engine.graphics.CubicVR.primitives.box({
       size: 5+Math.random(),
-      transform: (new CubicVR.Transform()).rotate([
+      transform: (new engine.graphics.CubicVR.Transform()).rotate([
                     Math.random()*360, 
                     Math.random()*360, 
                     Math.random()*360]).translate([
                     -0.5+Math.random()*0.5, 
                     -0.5+Math.random()*0.5, 
                     -0.5+Math.random()*0.5]),
-      material: new CubicVR.Material({
+      material: new engine.graphics.CubicVR.Material({
         specular: [1, 1, 1],
         shininess: 1.0,
         env_amount: 0.5,
         color: [Math.random()*0.2+0.8, Math.random()*0.1, 0],
         opacity: 0.1,
         textures: {
-          envsphere: new CubicVR.Texture('fract_reflections.jpg'),
-          alpha: new CubicVR.Texture('fract_reflections.jpg')
+          envsphere: new engine.graphics.CubicVR.Texture('fract_reflections.jpg'),
+          alpha: new engine.graphics.CubicVR.Texture('fract_reflections.jpg')
         }
       }),
       uvmapper: {
-        projectionMode: CubicVR.enums.uv.projection.CUBIC,
+        projectionMode: engine.graphics.CubicVR.enums.uv.projection.CUBIC,
         scale:[5, 5, 5]
       }
     });
     CubicVR.primitives.box({
       mesh: explosionMesh,
       size: 5+Math.random(),
-      transform: (new CubicVR.Transform()).rotate([
+      transform: (new engine.graphics.CubicVR.Transform()).rotate([
                     Math.random()*360, 
                     Math.random()*360, 
                     Math.random()*360]).translate([
                     -0.5+Math.random()*0.5, 
                     -0.5+Math.random()*0.5, 
                     -0.5+Math.random()*0.5]),
-      material: new CubicVR.Material({
+      material: new engine.graphics.CubicVR.Material({
         color: [Math.random()*0.2+0.8, Math.random()*0.2+0.06, 0],
         env_amount: 0.5,
         opacity: 0.1,
         textures: {
-          envsphere: new CubicVR.Texture('fract_reflections.jpg'),
-          alpha: new CubicVR.Texture('fract_reflections.jpg')
+          envsphere: new engine.graphics.CubicVR.Texture('fract_reflections.jpg'),
+          alpha: new engine.graphics.CubicVR.Texture('fract_reflections.jpg')
         }
       }),
       uvmapper: {
-        projectionMode: CubicVR.enums.uv.projection.CUBIC,
+        projectionMode: engine.graphics.CubicVR.enums.uv.projection.CUBIC,
         scale:[5, 5, 5]
       }
     });
@@ -114,25 +113,25 @@ function Game() {
       lon: 24,
       lat: 24,
       radius: 6+Math.random(),
-      transform: (new CubicVR.Transform()).rotate([Math.random()*360, Math.random()*360, Math.random()*360]),
-      material: new CubicVR.Material({
+      transform: (new engine.graphics.CubicVR.Transform()).rotate([Math.random()*360, Math.random()*360, Math.random()*360]),
+      material: new engine.graphics.CubicVR.Material({
         opacity: 0.999,
         color: [Math.random()*0.2+0.8, Math.random()*0.2+0.3, 0],
         textures: {
-          alpha: new CubicVR.Texture('fract_reflections.jpg')
+          alpha: new engine.graphics.CubicVR.Texture('fract_reflections.jpg')
         }
       }),
       uvmapper: {
-        projectionMode: CubicVR.enums.uv.projection.CUBIC,
+        projectionMode: engine.graphics.CubicVR.enums.uv.projection.CUBIC,
         scale:[5, 5, 5]
       }
     });
     explosionMesh.prepare();
 
     function makeExplosion ( position ) {
-      paladin.tasker.add((function () {
+      engine.tasker.add((function () {
         speaker.play( randomExplosion() );
-        var explosionObject = new CubicVR.SceneObject( explosionMesh );
+        var explosionObject = new engine.graphics.CubicVR.SceneObject( explosionMesh );
         explosionObject.position = position.slice();
         scene.graphics.bindSceneObject(explosionObject);
         explosionObject.rotation = [
@@ -153,19 +152,19 @@ function Game() {
       })());
     } //makeExplosion
 
-    var shipEntity = this.entity = new paladin.Entity({
+    var shipEntity = this.entity = new engine.Entity({
       parent: scene,
       children: [
-        new paladin.Entity({
+        new engine.Entity({
           parent: shipEntity,
           components: [
-            new paladin.component.Camera({
+            new engine.component.Camera({
               targeted: false,
               position: [0, 10, -40],
               rotation: [0, 180, 0]
             }), //camera
-            new paladin.component.Model( {
-              mesh: new paladin.graphics.Mesh( { 
+            new engine.component.Model( {
+              mesh: new engine.graphics.Mesh( { 
                 loadFrom: "ship-main.xml",
                 finalize: true
               }),
@@ -179,7 +178,7 @@ function Game() {
             var shipModel = entity.getComponents('graphics', 'model');
 
             var cameraRoll = 0;
-            paladin.tasker.add( {
+            engine.tasker.add( {
               callback: function ( task ) {
                 if ( events[rollLeftEvent] ) {
                   shipEntity.spatial.rotation[1] += 1 * task.dt/20;
@@ -197,7 +196,7 @@ function Game() {
               }
             } );
 
-            shipBody = new paladin.physics.Body({
+            shipBody = new engine.physics.Body({
               aabb: shipModel.object.getAABB()
             });
 
@@ -211,7 +210,7 @@ function Game() {
         var accel = 0.01;
         var cooldown = 0;
         var cooldownTime = 2.0 * ONE_SECOND;
-        var projectileMesh = new paladin.graphics.Mesh( {
+        var projectileMesh = new engine.graphics.Mesh( {
             primitives: [ {
                 type: 'box',
                 size: 1,
@@ -224,7 +223,7 @@ function Game() {
         var projectileAccel = 0.1;
         var projectileDuration = 4;
 
-        var updateTask = paladin.tasker.add( {
+        var updateTask = engine.tasker.add( {
             callback: function ( task ) {
 
                 // Move this ship.
@@ -236,7 +235,7 @@ function Game() {
                     Math.cos(rotY*Math.PI/180)
                 ];
 
-                dirVec = CubicVR.vec3.normalize(dirVec);
+                dirVec = engine.graphics.CubicVR.vec3.normalize(dirVec);
 
                 //entity.spatial.position[0] += dirVec[0] * accel * task.dt;
                 //entity.spatial.position[2] += dirVec[2] * accel * task.dt;
@@ -255,10 +254,10 @@ function Game() {
 
                 if( events[fireWeaponEvent] && 0 === cooldown ) {
                     cooldown = cooldownTime;
-                    var projectileEntity = new paladin.Entity( {
+                    var projectileEntity = new engine.Entity( {
                         parent: scene,
                         components: [
-                            new paladin.component.Model( {
+                            new engine.component.Model( {
                                 mesh: projectileMesh
                             } )
                         ],
@@ -277,14 +276,14 @@ function Game() {
                             scene.graphics.prepareTransforms();
 
                             var model = entity.getComponents( "graphics", "model" );
-                            var physicsBody = new paladin.physics.Body({
+                            var physicsBody = new engine.physics.Body({
                               aabb: model.object.getAABB()
                             });
                             physicsBody.setVelocity( entity.velocity );
                             physicsBody.setAcceleration( entity.accel );
                             universe.addBody( physicsBody );
 
-                            entity.updateTask = paladin.tasker.add( {                                
+                            entity.updateTask = engine.tasker.add( {                                
                                 callback: function( task ) {
                                     //entity.spatial.position[0] += entity.velocity[0] * entity.accel * task.dt;
                                     //entity.spatial.position[2] += entity.velocity[2] * entity.accel * task.dt;
@@ -317,90 +316,90 @@ function Game() {
             }
         } );
 
-        var inputMap = new paladin.InputMap( entity );
-        inputMap.add( paladin.messenger.Event( rollLeftEvent, true ),
-                      paladin.keyboardInput.Event( ['a'], true ) );
-        inputMap.add( paladin.messenger.Event( rollRightEvent, true ),
-                      paladin.keyboardInput.Event( ['d'], true ) );
-        inputMap.add( paladin.messenger.Event( fireWeaponEvent, true ),
-                      paladin.keyboardInput.Event( ['space'], true ) );
-        inputMap.add( paladin.messenger.Event( rollLeftEvent, false ),
-                      paladin.keyboardInput.Event( ['a'], false ) );
-        inputMap.add( paladin.messenger.Event( rollRightEvent, false ),
-                      paladin.keyboardInput.Event( ['d'], false ) );
-        inputMap.add( paladin.messenger.Event( fireWeaponEvent, false ),
-                      paladin.keyboardInput.Event( ['space'], false ) );
+        var inputMap = new engine.InputMap( entity );
+        inputMap.add( engine.messenger.Event( rollLeftEvent, true ),
+                      engine.keyboardInput.Event( ['a'], true ) );
+        inputMap.add( engine.messenger.Event( rollRightEvent, true ),
+                      engine.keyboardInput.Event( ['d'], true ) );
+        inputMap.add( engine.messenger.Event( fireWeaponEvent, true ),
+                      engine.keyboardInput.Event( ['space'], true ) );
+        inputMap.add( engine.messenger.Event( rollLeftEvent, false ),
+                      engine.keyboardInput.Event( ['a'], false ) );
+        inputMap.add( engine.messenger.Event( rollRightEvent, false ),
+                      engine.keyboardInput.Event( ['d'], false ) );
+        inputMap.add( engine.messenger.Event( fireWeaponEvent, false ),
+                      engine.keyboardInput.Event( ['space'], false ) );
 
         entity.listen( {
-            event: paladin.messenger.Event( rollLeftEvent, false ), 
+            event: engine.messenger.Event( rollLeftEvent, false ), 
             callback: function( p ) {
                 events[rollLeftEvent] = false;
             }
         } );
         entity.listen( {
-            event: paladin.messenger.Event( rollLeftEvent, true ), 
+            event: engine.messenger.Event( rollLeftEvent, true ), 
             callback: function( p ) {
                 events[rollLeftEvent] = true;
             }
         } );
         entity.listen( {
-            event: paladin.messenger.Event( rollRightEvent, false ), 
+            event: engine.messenger.Event( rollRightEvent, false ), 
             callback: function( p ) {
                 events[rollRightEvent] = false;
             }
         } );
         entity.listen( {
-            event: paladin.messenger.Event( rollRightEvent, true ), 
+            event: engine.messenger.Event( rollRightEvent, true ), 
             callback: function( p ) {
                 events[rollRightEvent] = true;
             }
         } );
         entity.listen( {
-            event: paladin.messenger.Event( fireWeaponEvent, false ),
+            event: engine.messenger.Event( fireWeaponEvent, false ),
             callback: function( p ) {
                 events[fireWeaponEvent] = false;
             }
         } );
         entity.listen( {
-            event: paladin.messenger.Event( fireWeaponEvent, true ),
+            event: engine.messenger.Event( fireWeaponEvent, true ),
             callback: function( p ) {
                 events[fireWeaponEvent] = true;
             }
         } );
         entity.listen( {
-            event: paladin.touchInput.Event( [], true ),
+            event: engine.touchInput.Event( [], true ),
             callback: function( p ) { 
                 var position = p[0].position;
-                var width = paladin.graphics.getWidth();
-                var height = paladin.graphics.getHeight();
+                var width = engine.graphics.getWidth();
+                var height = engine.graphics.getHeight();
                 if( position.y > height - height/4 ) {
-                    paladin.messenger.send( {
-                        event: paladin.messenger.Event( fireWeaponEvent, true )
+                    engine.messenger.send( {
+                        event: engine.messenger.Event( fireWeaponEvent, true )
                     } );
                 }
                 else if( position.x < width/2 ) {
-                    paladin.messenger.send( {
-                        event: paladin.messenger.Event( rollLeftEvent, true )
+                    engine.messenger.send( {
+                        event: engine.messenger.Event( rollLeftEvent, true )
                     } );
                 }
                 else if( position.x > width/2 ) {
-                    paladin.messenger.send( {
-                        event: paladin.messenger.Event( rollRightEvent, true )
+                    engine.messenger.send( {
+                        event: engine.messenger.Event( rollRightEvent, true )
                     } );
                 }
             }
         } );
         entity.listen( {
-            event: paladin.touchInput.Event( [], false ),
+            event: engine.touchInput.Event( [], false ),
             callback: function( p ) { 
-                paladin.messenger.send( {
-                    event: paladin.messenger.Event( fireWeaponEvent, false )
+                engine.messenger.send( {
+                    event: engine.messenger.Event( fireWeaponEvent, false )
                 } );
-                paladin.messenger.send( {
-                    event: paladin.messenger.Event( rollLeftEvent, false )
+                engine.messenger.send( {
+                    event: engine.messenger.Event( rollLeftEvent, false )
                 } );
-                paladin.messenger.send( {
-                    event: paladin.messenger.Event( rollRightEvent, false )
+                engine.messenger.send( {
+                    event: engine.messenger.Event( rollRightEvent, false )
                 } );
             }
         } );
@@ -411,7 +410,7 @@ function Game() {
     var boxes = [];
     for (var i=0; i<10; ++i) {
       (function () {
-        var mesh = new paladin.graphics.Mesh( {
+        var mesh = new engine.graphics.Mesh( {
             primitives: [ {
                 type: 'box',
                 size: 5 + Math.random(),
@@ -422,8 +421,8 @@ function Game() {
             finalize: true
         } );
 
-        var box = new paladin.Entity();
-        var model = new paladin.component.Model( {
+        var box = new engine.Entity();
+        var model = new engine.component.Model( {
             mesh: mesh
         } );
         box.addComponent( model );
@@ -440,7 +439,7 @@ function Game() {
 
         boxes.push(box);
       
-        box.body = new paladin.physics.Body({
+        box.body = new engine.physics.Body({
           aabb: model.object.getAABB()
         });
 
@@ -451,7 +450,7 @@ function Game() {
       })();
     } //for
 
-    var rotationTask = paladin.tasker.add( {
+    var rotationTask = engine.tasker.add( {
         callback: function( task ) {
           for ( var i=0, l=boxes.length; i<l; ++i) {
             boxes[i].spatial.rotation[0] += 0.1;
@@ -463,7 +462,7 @@ function Game() {
     
 
     this.run = function () {
-      paladin.tasker.add({
+      engine.tasker.add({
         callback: function ( task ) {
           var collisions = universe.advance( task.dt/100 );
           if ( shipBody.collisions.length > 0 ) {
@@ -478,11 +477,11 @@ function Game() {
           }
         }
       });
-      paladin.run();
+      engine.run();
     };
 
-    scene.graphics.bindLight( new CubicVR.Light({
-      type: CubicVR.enums.light.type.AREA,
+    scene.graphics.bindLight( new engine.graphics.CubicVR.Light({
+      type: engine.graphics.CubicVR.enums.light.type.AREA,
       intensity:0.9,
       mapRes:1024,
       areaCeiling:40,
@@ -492,9 +491,13 @@ function Game() {
 
 }
 
-document.addEventListener('DOMContentLoaded', function (e) {
-    var game = new Game();
-    game.run();
-}, false);
+document.addEventListener( 'DOMContentLoaded', function( e ) {
+    paladin.create( {
+        debug: true
+    }, function( engineInstance ) {
+        var game = new Game( engineInstance );
+        game.run();
+    } );
+}, false );
 
-})(window, document, CubicVR, Paladin);
+})();
