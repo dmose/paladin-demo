@@ -1,3 +1,4 @@
+/*global paladin*/
 (function () {
 
 var ONE_SECOND = 1000;
